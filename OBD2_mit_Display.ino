@@ -2,8 +2,6 @@
 #include <Adafruit_ST7735.h> // Hardware-specific library for ST7735
 #include <Adafruit_ST7789.h> // Hardware-specific library for ST7789
 
-#include <SoftwareSerial.h>
-
 #if defined(ARDUINO_FEATHER_ESP32) // Feather Huzzah32
   #define TFT_CS         14
   #define TFT_RST        15
@@ -28,8 +26,6 @@
 // using the breakout board's microSD card.
 
 Adafruit_ST7735 tft = Adafruit_ST7735(TFT_CS, TFT_DC, TFT_RST);
-
-SoftwareSerial mySerial(11, 12); // RX, TX
 
 // array of PID's to print values of
 String INIT = "0100";
@@ -78,7 +74,6 @@ void setup() {
   delay(500);
   
   Serial.begin(38400);
-  mySerial.begin(38400);
   
   tft.fillScreen(ST7735_BLACK);
   tft.setCursor(0, 0);
@@ -88,28 +83,25 @@ void setup() {
   tft.print(F("Attempting to connect to ELM327 ... "));
   Serial.print("ATZ");
   Serial.print(NewLine);
-  mySerial.print("ATZ");
-  mySerial.print(NewLine);
+
+  String ELM;
 
   while (true) {
     if (Serial.available()){
-      String ELM = Serial.readline();
-      //Serial.print(ELM);
-      //break;
-      ELM.trim();
-      if (ELM.startsWith("ELM")){
+      ELM = Serial.readString();
+      Serial.print(ELM);
+      ELM = Serial.readString();
+      Serial.print(ELM);
+      ELM = Serial.readString();
+      Serial.print(ELM);
+      ELM = Serial.readString();
+      Serial.print(ELM);
+      //ELM = ".ATZ\r\n\r\n\r\nELM327 v2.1\r\n\r\n>\r\n";
+      if (ELM.indexOf("ELM") >= 0){
+        Serial.print(ELM);
         tft.print(F("success!"));
         break;
       }
-      Serial.flush();
-    }
-
-    if (mySerial.available()){
-      if (mySerial.readString().startsWith("ELM")){
-        tft.print(F("success!"));
-        break;
-      }
-      //mySerial.flush();
     }
   }
 
@@ -124,24 +116,13 @@ void setup() {
   tft.print(F("Attempting to connect to OBD2 CAN bus ... "));
   Serial.print(INIT);
   Serial.print(NewLine);
-  mySerial.print(INIT);
-  mySerial.print(NewLine);
   
   while (true) {
     if (Serial.available()){
-      if (Serial.readString().startsWith("41 00")){
+      if (Serial.readString().indexOf("41 00") >= 0){
         tft.print(F("success!"));
         break;
       }
-      Serial.flush();
-    }
-
-    if (mySerial.available()){
-      if (mySerial.readString().startsWith("41 00")){
-        tft.print(F("success!"));
-        break;
-      }
-      mySerial.flush();
     }
   }
   
@@ -260,9 +241,11 @@ void ReadData(String PID){
   memset(integers, 0, sizeof(integers));
   
   while(true){
-    Data = Serial.readString();
-    if (Data.startsWith("41")){
-      break;
+    if(Serial.available()){
+      Data = Serial.readString();
+      if (Data.startsWith("41")){
+        break;
+      }
     }
   }
 
