@@ -33,7 +33,7 @@ Adafruit_ST7735 tft = Adafruit_ST7735(TFT_CS, TFT_DC, TFT_RST);
 String INIT = "0100";
 String COOLANT_TEMPERATURE = "0105";
 String OIL_TEMPERATURE = "015C";
-String FUEL = "012F";
+//String FUEL = "012F";
 
 String NewLine = "\r\n";
 
@@ -41,25 +41,31 @@ int ledPin = 5;
 int state = 2;
 int Delay = 100;
 
-int Water = 80;
-int Oil = 90;
-int Diesel = 100;
+int Water;
+int Oil;
+
+int HIGHWATER = 80;
+int HIGHOIL = 80;
 
 const int MAX_BYTES = 43;
 byte bytes[MAX_BYTES] = {0};
 int integers[MAX_BYTES] = {0};
 
+bool redW = false;
+bool redO = false;
+
 SoftwareSerial mySerial(11, 12); // RX, TX
 
+
+
 void setup() {
+  pinMode(ledPin, OUTPUT);
+  pinMode(state, INPUT);
 
   analogWrite(ledPin, 255);
   
   // Use this initializer if using a 1.8" TFT screen:
   tft.initR(INITR_BLACKTAB);      // Init ST7735S chip, black tab
-
-  // OR use this initializer if using a 1.8" TFT screen with offset such as WaveShare:
-  // tft.initR(INITR_GREENTAB);      // Init ST7735S chip, green tab
 
   tft.fillScreen(ST7735_BLACK);
   
@@ -107,7 +113,6 @@ void setup() {
     }
   }
 
-
   delay(200);
   
   tft.fillScreen(ST7735_BLACK);
@@ -137,83 +142,24 @@ void setup() {
   }
   
   tft.fillScreen(ST7735_BLACK);
-  ReadData(COOLANT_TEMPERATURE);
-  Water = integers[2] - 40;
-  ReadData(OIL_TEMPERATURE);
-  Oil = integers[2] - 40;
-  ReadData(FUEL);
-  Diesel = integers[2];
-  
-  tft.setCursor(0, 0);
-  tft.setTextColor(ST77XX_WHITE);
-  tft.setTextWrap(true);
-  tft.setTextSize(3);
-  tft.print(F("Water: "));
-
-  bool redW = false;
-  tft.setTextColor(ST77XX_WHITE);
-  if(Water < 120 && !redW){
-      redW = true;
-      tft.setTextColor(ST77XX_RED);
-    
-  } else {
-    redW = false;
-    tft.setTextColor(ST77XX_WHITE);
-  }
-
-  if (Water < 10) {
-    String Wat = String(Water);
-    tft.print("  " + Wat);
-  }
-  else if (Water < 100) {
-    String Wat = String(Water);
-    tft.print(" " + Wat);
-  }
-  else tft.print(Water);
-  
-  
-  tft.setCursor(0, 52);
-  tft.print(F("Oil: "));
-
-  bool redO = false;
-  tft.setTextColor(ST77XX_WHITE);
-  if(Oil < 120 && !redO){
-      redO = true;
-      tft.setTextColor(ST77XX_RED);
-    
-  } else {
-    redO = false;
-  }
-  
-  if (Oil < 10) {
-    String Oi = String(Oil);
-    tft.print("  " + Oi);
-  }
-  else if (Oil < 100) {
-    String Oi = String(Oil);
-    tft.print(" " + Oi);
-  }
-  else tft.print(Oil);
-  
-  
-  tft.setCursor(0, 80);
-  tft.print(F("Diesel: "));
-  
-  if (Diesel < 10) {
-    String Dies = String(Diesel);
-    tft.print("  " + Dies);
-  }
-  else if (Diesel < 100){
-    String Dies = String(Diesel);
-    tft.print(" " + Dies);
-  }
-  else tft.print(Diesel);
-  
 }
 
 void loop() {
-  tft.setTextColor(ST77XX_BLUE, ST77XX_BLACK);
-  tft.setCursor(126, 0);
+  ReadData(COOLANT_TEMPERATURE);
+  Water = integers[2] - 40;
+  
+  tft.setTextColor(ST77XX_WHITE, ST77XX_BLACK);
+  tft.setTextSize(8);
+  tft.setTextWrap(false);
+  tft.setCursor(0, 5);
+
+  if (Water < HIGHWATER && !redW){
+    redW = true;
+    tft.setTextColor(ST77XX_RED, ST77XX_BLACK);
+  }
+  else {
+    redW = false;
+  }
   
   if (Water < 10) {
     String Wat = String(Water);
@@ -225,8 +171,20 @@ void loop() {
   }
   else tft.print(Water);
   
-  tft.setTextColor(ST77XX_RED, ST77XX_BLACK);
-  tft.setCursor(90, 52);
+
+  if (Oil < HIGHOIL && !redO){
+    redO = true;
+    tft.setTextColor(ST77XX_RED, ST77XX_BLACK);
+  }
+  else {
+    redO = false;
+  }
+  
+  ReadData(OIL_TEMPERATURE);
+  Oil = integers[2] - 40;
+  
+  tft.setTextColor(ST77XX_WHITE, ST77XX_BLACK);
+  tft.setCursor(0, 66);
   
   if (Oil < 10) {
     String Oi = String(Oil);
@@ -237,27 +195,6 @@ void loop() {
     tft.print(" " + Oi);
   }
   else tft.print(Oil);
-  
-  tft.setTextColor(ST77XX_YELLOW, ST77XX_BLACK);
-  tft.setCursor(0, 104);
-  
-  if (Diesel < 10) {
-    String Dies = String(Diesel);
-    tft.print("  " + Dies);
-  }
-  else if (Diesel < 100){
-    String Dies = String(Diesel);
-    tft.print(" " + Dies);
-  }
-  else tft.print(Diesel);
-
-  ReadData(COOLANT_TEMPERATURE);
-  Water = integers[2] - 40;
-  ReadData(OIL_TEMPERATURE);
-  Oil = integers[2] - 40;
-  ReadData(FUEL);
-  Diesel = integers[2];
-  
 }
 
 void ReadData(String PID){
@@ -288,6 +225,7 @@ void ReadData(String PID){
   }
 
   if(!Error) parseString(Data);
+  else integers[2] = 333;
 }
 
 void parseString(String input) {
